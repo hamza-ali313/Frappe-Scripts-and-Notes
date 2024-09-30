@@ -1,0 +1,36 @@
+frappe.ui.form.on('Purchase Order Item', { 
+qty: function(frm, cdt, cdn) {
+var d = locals[cdt][cdn];
+    frappe.model.set_value(d.doctype, d.name, "po_quantity", d.qty);
+}   }
+);
+
+frappe.ui.form.on('Purchase Order', {
+    on_submit: function(frm) {
+        // Automatically create Purchase Invoice when Purchase Order is submitted
+        frappe.call({
+            method: "frappe.client.insert",
+            args: {
+                doc: {
+                    doctype: "Purchase Invoice",
+                    supplier: frm.doc.supplier,
+                    posting_date: frappe.datetime.nowdate(),
+                    items: frm.doc.items.map(item => {
+                        return {
+                            item_code: item.item_code,
+                            qty: item.qty,
+                            rate: item.rate,
+                            purchase_order: frm.doc.name
+                        };
+                    }),
+                    purchase_order: frm.doc.name
+                }
+            },
+            callback: function(r) {
+                if(r.message) {
+                    frappe.msgprint("Purchase Invoice " + r.message.name + " created successfully.");
+                }
+            }
+        });
+    }
+});
